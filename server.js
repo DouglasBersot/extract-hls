@@ -21,31 +21,31 @@ app.get('/api/getm3u8/:code', async (req, res) => {
 
     let tsSegmentUrl = null;
 
-    // Interceptar os requests de .ts
+    // Intercepta requisições e captura o primeiro .ts
     page.on('request', request => {
       const url = request.url();
-      if (url.includes('.ts')) {
-        console.log('📦 Segmento TS interceptado:', url);
+      if (url.includes('.ts') && !tsSegmentUrl) {
+        console.log('📦 .TS interceptado:', url);
         tsSegmentUrl = url;
       }
     });
 
-    // Acessa a página e espera totalmente carregar
+    // Abre a página de destino
     await page.goto(targetUrl, { waitUntil: 'networkidle2', timeout: 30000 });
 
-    // Clica no player (caso necessário)
+    // Clica no vídeo para iniciar o player
     await page.evaluate(() => {
       const video = document.querySelector('video');
       if (video) video.click();
     });
 
-    // Espera alguns segundos para os .ts aparecerem
-    await page.waitForTimeout(4000);
+    // Espera alguns segundos para os segmentos .ts carregarem
+    await new Promise(resolve => setTimeout(resolve, 5000));
 
     await browser.close();
 
     if (tsSegmentUrl && tsSegmentUrl.includes('.ts')) {
-      const masterUrl = tsSegmentUrl.replace(/\/[^/]+\.ts/, '/master.m3u8');
+      const masterUrl = tsSegmentUrl.replace(/\/[^\/]+\.ts.*$/, '/master.m3u8');
       console.log('✅ Reconstruído:', masterUrl);
       return res.json({ success: true, url: masterUrl });
     } else {
@@ -53,12 +53,12 @@ app.get('/api/getm3u8/:code', async (req, res) => {
     }
   } catch (error) {
     console.error('❌ Erro ao extrair o link:', error);
-    res.status(500).json({ success: false, error: error.message });
+    return res.status(500).json({ success: false, error: error.message });
   }
 });
 
 app.get('/', (req, res) => {
-  res.send('🔍 API Puppeteer Online - Use /api/getm3u8/{code}');
+  res.send('🧪 API Puppeteer Online - Use /api/getm3u8/{code}');
 });
 
 app.listen(PORT, () => {
