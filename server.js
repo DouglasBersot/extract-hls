@@ -10,19 +10,19 @@ app.get('/api/getm3u8/:code', async (req, res) => {
 
   try {
     // Usa o caminho do executável baixado pelo Puppeteer
-    const executablePath = puppeteer.executablePath();
+const executablePath = puppeteer.executablePath();
 
-    const browser = await puppeteer.launch({
-      headless: "new",
-      executablePath,
-      args: [
-        '--no-sandbox',
-        '--disable-setuid-sandbox',
-        '--disable-dev-shm-usage',
-        '--disable-gpu',
-        '--disable-software-rasterizer'
-      ]
-    });
+const browser = await puppeteer.launch({
+  headless: "new",
+  executablePath,
+  args: [
+    '--no-sandbox',
+    '--disable-setuid-sandbox',
+    '--disable-dev-shm-usage',
+    '--disable-gpu',
+    '--disable-software-rasterizer'
+  ]
+});
 
     const page = await browser.newPage();
     await page.goto(url, { waitUntil: 'networkidle2', timeout: 30000 });
