@@ -21,9 +21,6 @@ app.get('/api/getm3u8/:code', async (req, res) => {
         '--no-sandbox',
         '--disable-setuid-sandbox',
         '--disable-dev-shm-usage',
-        '--disable-accelerated-2d-canvas',
-        '--no-zygote',
-        '--single-process',
       ],
       defaultViewport: chromium.defaultViewport,
       executablePath,
@@ -31,14 +28,12 @@ app.get('/api/getm3u8/:code', async (req, res) => {
     });
     console.log('🚀 Navegador aberto');
 
-    console.log('📄 Criando nova página...');
     const page = await browser.newPage();
-    console.log('📄 Página criada');
 
     let tsSegmentUrl = null;
 
-    // Interceptar os requests de .ts
-    page.on('request', request => {
+    // Interceptar requests de .ts para pegar o segmento
+    page.on('request', (request) => {
       const url = request.url();
       if (url.includes('.ts')) {
         console.log('📦 Segmento TS interceptado:', url);
@@ -48,29 +43,29 @@ app.get('/api/getm3u8/:code', async (req, res) => {
 
     console.log('🌐 Acessando URL:', targetUrl);
     await page.goto(targetUrl, { waitUntil: 'networkidle2', timeout: 30000 });
-    console.log('✅ Página carregada, aguardando .ts...');
 
-    // Clica no player (caso necessário)
+    // Clicar no vídeo para disparar o player (se existir)
     await page.evaluate(() => {
       const video = document.querySelector('video');
       if (video) video.click();
     });
 
-    // Espera alguns segundos para os .ts aparecerem
+    console.log('✅ Página carregada, aguardando interceptação dos segmentos .ts...');
     await page.waitForTimeout(4000);
 
     await browser.close();
 
     if (tsSegmentUrl && tsSegmentUrl.includes('.ts')) {
+      // Substitui o segmento .ts por master.m3u8 para reconstruir a URL válida
       const masterUrl = tsSegmentUrl.replace(/\/[^/]+\.ts/, '/master.m3u8');
-      console.log('✅ Reconstruído:', masterUrl);
+      console.log('✅ Reconstruído master.m3u8:', masterUrl);
       return res.json({ success: true, url: masterUrl });
     } else {
       return res.status(404).json({ success: false, error: 'Segmento .ts não encontrado' });
     }
   } catch (error) {
     console.error('❌ Erro ao extrair o link:', error);
-    res.status(500).json({ success: false, error: error.message });
+    return res.status(500).json({ success: false, error: error.message });
   }
 });
 
