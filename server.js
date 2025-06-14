@@ -9,17 +9,20 @@ app.get('/api/getm3u8/:code', async (req, res) => {
   const url = `https://c1z39.com/bkg/${code}`;
 
   try {
-      const browser = await puppeteer.launch({
-  headless: "new", // usa modo estável
-  args: [
-    '--no-sandbox',
-    '--disable-setuid-sandbox',
-    '--disable-dev-shm-usage',
-    '--disable-gpu',
-    '--disable-software-rasterizer'
-  ]
-});
+    // Usa o caminho do executável baixado pelo Puppeteer
+    const executablePath = puppeteer.executablePath();
 
+    const browser = await puppeteer.launch({
+      headless: "new",
+      executablePath,
+      args: [
+        '--no-sandbox',
+        '--disable-setuid-sandbox',
+        '--disable-dev-shm-usage',
+        '--disable-gpu',
+        '--disable-software-rasterizer'
+      ]
+    });
 
     const page = await browser.newPage();
     await page.goto(url, { waitUntil: 'networkidle2', timeout: 30000 });
@@ -51,4 +54,3 @@ app.get('/', (req, res) => {
 app.listen(PORT, () => {
   console.log(`✅ Servidor iniciado em http://localhost:${PORT}`);
 });
-
