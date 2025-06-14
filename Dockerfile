@@ -1,6 +1,6 @@
 FROM node:22-bullseye
 
-# Instala todas as dependências necessárias para rodar o Chromium com Puppeteer
+# Instala dependências para Chromium
 RUN apt-get update && apt-get install -y \
   wget \
   ca-certificates \
@@ -42,6 +42,9 @@ RUN apt-get update && apt-get install -y \
 
 # Define diretório de trabalho
 WORKDIR /app
+
+# Evita erro de permissão no Render
+RUN npm config set unsafe-perm true
 
 # Copia package.json e instala dependências Node.js
 COPY package*.json ./
