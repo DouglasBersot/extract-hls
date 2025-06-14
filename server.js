@@ -17,16 +17,24 @@ app.get('/api/getm3u8/:code', async (req, res) => {
       executablePath: await chromium.executablePath(),
       headless: chromium.headless,
     });
+    console.log("✅ Puppeteer iniciado com sucesso!");
 
     const page = await browser.newPage();
-    page.setDefaultNavigationTimeout(20000); // Evita travamento
+    console.log("📄 Nova página criada.");
 
     console.log("🌐 Acessando URL:", targetUrl);
-    await page.goto(targetUrl, { waitUntil: 'domcontentloaded', timeout: 20000 });
+    try {
+      await page.goto(targetUrl, { waitUntil: 'domcontentloaded', timeout: 20000 });
+      console.log("✅ Página carregada!");
+    } catch (gotoErr) {
+      console.error("❌ Erro ao carregar a página:", gotoErr.message);
+      await browser.close();
+      return res.status(500).json({ success: false, error: "Erro ao carregar página" });
+    }
 
     let tsSegmentUrl = null;
 
-    // Intercepta .ts
+    // Interceptar requests de arquivos .ts
     page.on('request', request => {
       const url = request.url();
       if (url.includes('.ts')) {
@@ -35,23 +43,26 @@ app.get('/api/getm3u8/:code', async (req, res) => {
       }
     });
 
-    // Simula clique no player
+    // Clica no player (se existir)
     await page.evaluate(() => {
       const video = document.querySelector('video');
-      if (video) video.click();
+      if (video) {
+        video.click();
+        console.log('▶️ Video clicado para iniciar o stream');
+      }
     });
 
-    console.log("✅ Página carregada, aguardando .ts...");
-    await page.waitForTimeout(4000); // Aguarda .ts aparecer
+    // Espera 4 segundos para garantir que os .ts carreguem
+    await page.waitForTimeout(4000);
 
     await browser.close();
 
     if (tsSegmentUrl && tsSegmentUrl.includes('.ts')) {
+      // Troca o segmento .ts pelo master.m3u8
       const masterUrl = tsSegmentUrl.replace(/\/[^/]+\.ts/, '/master.m3u8');
-      console.log('✅ Reconstruído:', masterUrl);
+      console.log('✅ Reconstruído URL master.m3u8:', masterUrl);
       return res.json({ success: true, url: masterUrl });
     } else {
-      console.warn("⚠️ Nenhum segmento .ts encontrado");
       return res.status(404).json({ success: false, error: 'Segmento .ts não encontrado' });
     }
   } catch (error) {
@@ -60,9 +71,8 @@ app.get('/api/getm3u8/:code', async (req, res) => {
   }
 });
 
-
 app.get('/', (req, res) => {
-  res.send('🧪 API Puppeteer Online - Use /api/getm3u8/{code}');
+  res.send('🔍 API Puppeteer Online - Use /api/getm3u8/{code}');
 });
 
 app.listen(PORT, () => {
