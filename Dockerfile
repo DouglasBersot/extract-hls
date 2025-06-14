@@ -1,6 +1,6 @@
 FROM node:22-bullseye
 
-# Instala bibliotecas necessárias para rodar o Chromium
+# Dependências necessárias para rodar Chromium + Puppeteer
 RUN apt-get update && apt-get install -y \
   wget \
   ca-certificates \
@@ -40,20 +40,13 @@ RUN apt-get update && apt-get install -y \
   --no-install-recommends && \
   apt-get clean && rm -rf /var/lib/apt/lists/*
 
-# Cria diretório de trabalho
 WORKDIR /app
 
-# Copia os arquivos de dependências
 COPY package*.json ./
-
-# Instala as dependências do Node.js
 RUN npm install
 
-# Copia o restante dos arquivos do projeto
 COPY . .
 
-# Expõe a porta da API
 EXPOSE 3000
 
-# Inicia o servidor
 CMD ["node", "server.js"]
