@@ -10,32 +10,30 @@ app.get('/api/getm3u8/:code', async (req, res) => {
   const targetUrl = `https://c1z39.com/bkg/${code}`;
 
   try {
-    console.log("🔧 Iniciando Puppeteer...");
+    console.log('🔧 Iniciando Puppeteer...');
+
+    const executablePath = await chromium.executablePath();
+    console.log('🔍 Caminho do Chromium:', executablePath);
+
     const browser = await puppeteer.launch({
-      args: chromium.args,
+      args: [...chromium.args, '--no-sandbox', '--disable-setuid-sandbox'],
       defaultViewport: chromium.defaultViewport,
-      executablePath: await chromium.executablePath(),
+      executablePath,
       headless: chromium.headless,
     });
-    console.log("✅ Puppeteer iniciado com sucesso!");
+
+    console.log('🌐 Navegador aberto');
 
     const page = await browser.newPage();
-    console.log("📄 Nova página criada.");
+    console.log('📄 Página criada');
 
-    console.log("🌐 Acessando URL:", targetUrl);
-    try {
-      await page.goto(targetUrl, { waitUntil: 'domcontentloaded', timeout: 20000 });
-      console.log("✅ Página carregada!");
-    } catch (gotoErr) {
-      console.error("❌ Erro ao carregar a página:", gotoErr.message);
-      await browser.close();
-      return res.status(500).json({ success: false, error: "Erro ao carregar página" });
-    }
+    console.log('🌐 Acessando URL:', targetUrl);
+    await page.goto(targetUrl, { waitUntil: 'networkidle2', timeout: 60000 });
+    console.log('✅ Página carregada');
 
     let tsSegmentUrl = null;
 
-    // Interceptar requests de arquivos .ts
-    page.on('request', request => {
+    page.on('request', (request) => {
       const url = request.url();
       if (url.includes('.ts')) {
         console.log('📦 Segmento TS interceptado:', url);
@@ -43,31 +41,31 @@ app.get('/api/getm3u8/:code', async (req, res) => {
       }
     });
 
-    // Clica no player (se existir)
+    // Clica no player (caso necessário)
     await page.evaluate(() => {
       const video = document.querySelector('video');
       if (video) {
+        console.log('▶️ Clicando no vídeo para iniciar');
         video.click();
-        console.log('▶️ Video clicado para iniciar o stream');
       }
     });
 
-    // Espera 4 segundos para garantir que os .ts carreguem
-    await page.waitForTimeout(4000);
+    console.log('⏳ Aguardando segmentos .ts aparecerem...');
+    await page.waitForTimeout(5000);
 
     await browser.close();
+    console.log('🛑 Navegador fechado');
 
     if (tsSegmentUrl && tsSegmentUrl.includes('.ts')) {
-      // Troca o segmento .ts pelo master.m3u8
       const masterUrl = tsSegmentUrl.replace(/\/[^/]+\.ts/, '/master.m3u8');
-      console.log('✅ Reconstruído URL master.m3u8:', masterUrl);
+      console.log('✅ URL reconstruída do master.m3u8:', masterUrl);
       return res.json({ success: true, url: masterUrl });
     } else {
       return res.status(404).json({ success: false, error: 'Segmento .ts não encontrado' });
     }
   } catch (error) {
     console.error('❌ Erro ao extrair o link:', error);
-    res.status(500).json({ success: false, error: error.message });
+    return res.status(500).json({ success: false, error: error.message });
   }
 });
 
