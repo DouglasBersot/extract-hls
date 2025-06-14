@@ -1,6 +1,6 @@
 FROM node:22-bullseye
 
-# Dependências necessárias para rodar Chromium + Puppeteer
+# Instala dependências necessárias para Chromium
 RUN apt-get update && apt-get install -y \
   wget \
   ca-certificates \
@@ -37,12 +37,14 @@ RUN apt-get update && apt-get install -y \
   libxtst6 \
   libdrm2 \
   libgbm1 \
+  chromium \
   --no-install-recommends && \
   apt-get clean && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
 
 COPY package*.json ./
+
 RUN npm install
 
 COPY . .
