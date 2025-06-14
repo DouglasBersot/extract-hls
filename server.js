@@ -11,6 +11,7 @@ app.get('/api/getm3u8/:code', async (req, res) => {
   try {
     // Usa o caminho do executável baixado pelo Puppeteer
 const executablePath = puppeteer.executablePath();
+console.log('Chromium path:', puppeteer.executablePath()); 
 
 const browser = await puppeteer.launch({
   headless: "new",
