@@ -1,7 +1,7 @@
-# Usa uma imagem Node.js com Debian, compatível com Puppeteer
+# Usa imagem Node com suporte para bibliotecas do Chromium
 FROM node:22-bullseye
 
-# Instala as dependências necessárias para o Chromium funcionar
+# Instala dependências do Chromium necessárias ao Puppeteer
 RUN apt-get update && apt-get install -y \
   wget \
   ca-certificates \
@@ -36,20 +36,20 @@ RUN apt-get update && apt-get install -y \
   libxrender1 \
   libxss1 \
   libxtst6 \
-  --no-install-recommends \
-  && apt-get clean \
-  && rm -rf /var/lib/apt/lists/*
+  libdrm2 \
+  --no-install-recommends && \
+  apt-get clean && rm -rf /var/lib/apt/lists/*
 
 # Define diretório de trabalho
 WORKDIR /app
 
-# Copia os arquivos do projeto
-COPY package.json package-lock.json* ./
+# Copia arquivos do projeto e instala dependências
+COPY package*.json ./
 RUN npm install
 
 COPY . .
 
-# Expõe a porta
+# Expõe a porta do servidor
 EXPOSE 3000
 
 # Comando de inicialização
