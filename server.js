@@ -23,16 +23,19 @@ app.get('/api/getm3u8/:code', async (req, res) => {
     const page = await browser.newPage();
     await page.goto(url, { waitUntil: 'networkidle2', timeout: 30000 });
 
-    // Espera o player carregar
-    await page.waitForFunction(() => typeof jwplayer === 'function' && jwplayer().getPlaylist, { timeout: 10000 });
+    // Aguarda jwplayer estar disponível no DOM
+    await page.waitForFunction(
+      () => typeof jwplayer === 'function' && jwplayer().getPlaylist,
+      { timeout: 10000 }
+    );
 
-    // Aguarda um tempo adicional para o player montar a playlist
-    await page.waitForTimeout(2000);
+    // Aguarda 2 segundos para garantir que a playlist seja carregada
+    await new Promise(resolve => setTimeout(resolve, 2000));
 
     const hls = await page.evaluate(() => {
       try {
         return jwplayer().getPlaylist()[0].file;
-      } catch (e) {
+      } catch {
         return null;
       }
     });
