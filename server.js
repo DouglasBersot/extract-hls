@@ -1,3 +1,9 @@
+const express = require('express');
+const puppeteer = require('puppeteer');
+
+const app = express();
+const PORT = process.env.PORT || 3000;
+
 app.get('/api/getm3u8/:code', async (req, res) => {
   const { code } = req.params;
   const url = `https://c1z39.com/bkg/${code}`;
@@ -17,7 +23,7 @@ app.get('/api/getm3u8/:code', async (req, res) => {
     const page = await browser.newPage();
     await page.goto(url, { waitUntil: 'networkidle2', timeout: 30000 });
 
-    // Aguarda jwplayer carregar e estar pronto
+    // Espera até que o jwplayer esteja totalmente carregado
     await page.waitForFunction(() => {
       return typeof jwplayer === 'function' &&
              jwplayer().getPlaylist &&
@@ -37,4 +43,12 @@ app.get('/api/getm3u8/:code', async (req, res) => {
   } catch (err) {
     res.status(500).json({ success: false, error: err.message });
   }
+});
+
+app.get('/', (req, res) => {
+  res.send('API Puppeteer Online - Use /api/getm3u8/{file_code}');
+});
+
+app.listen(PORT, () => {
+  console.log(`✅ Servidor iniciado em http://localhost:${PORT}`);
 });
