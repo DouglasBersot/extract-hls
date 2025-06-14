@@ -1,7 +1,6 @@
-# Usa imagem Node com suporte para bibliotecas do Chromium
 FROM node:22-bullseye
 
-# Instala dependências do Chromium necessárias ao Puppeteer
+# Instala todas as dependências necessárias para rodar o Chromium com Puppeteer
 RUN apt-get update && apt-get install -y \
   wget \
   ca-certificates \
@@ -37,20 +36,22 @@ RUN apt-get update && apt-get install -y \
   libxss1 \
   libxtst6 \
   libdrm2 \
+  libgbm1 \
   --no-install-recommends && \
   apt-get clean && rm -rf /var/lib/apt/lists/*
 
 # Define diretório de trabalho
 WORKDIR /app
 
-# Copia arquivos do projeto e instala dependências
+# Copia package.json e instala dependências Node.js
 COPY package*.json ./
 RUN npm install
 
+# Copia todos os arquivos do projeto
 COPY . .
 
 # Expõe a porta do servidor
 EXPOSE 3000
 
-# Comando de inicialização
+# Comando para iniciar o servidor
 CMD ["node", "server.js"]
