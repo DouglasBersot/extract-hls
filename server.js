@@ -15,50 +15,47 @@ app.get('/api/getm3u8/:code', async (req, res) => {
     });
 
     const page = await browser.newPage();
+    let m3u8BaseUrl = null;
+
+    // Captura a primeira requisição de segmento .ts
+    page.on('request', request => {
+      const reqUrl = request.url();
+      if (reqUrl.includes('.ts') && reqUrl.includes('?t=') && !m3u8BaseUrl) {
+        // Remove o último segmento (ex: /seg-1.ts) e adiciona /master.m3u8
+        const masterUrl = reqUrl.replace(/\/[^\/]+\.ts/, '/master.m3u8');
+        m3u8BaseUrl = masterUrl;
+        console.log('🎯 Capturado .ts => Construído:', masterUrl);
+      }
+    });
+
     await page.goto(url, { waitUntil: 'networkidle2', timeout: 30000 });
 
-    // Injetando a lógica que funcionou no console do navegador
-    const m3u8Url = await page.evaluate(async () => {
-      function wait(ms) {
-        return new Promise(resolve => setTimeout(resolve, ms));
-      }
-
-      for (let retries = 0; retries < 20; retries++) {
-        if (typeof jwplayer === "function") {
-          const player = jwplayer("vplayer");
-
-          const file =
-            player?.getConfig?.().sources?.[0]?.file ||
-            player?.getPlaylist?.()[0]?.file;
-
-          if (file && file.includes(".m3u8")) {
-            return file;
-          }
-        }
-
-        await wait(1000); // espera 1s antes da próxima tentativa
-      }
-
-      return null; // se não encontrar
+    // Dá play no vídeo automaticamente (ativa a geração dos .ts)
+    await page.evaluate(() => {
+      const player = jwplayer && jwplayer("vplayer");
+      if (player) player.play();
     });
+
+    // Espera até capturar o .ts (5 segundos)
+    await new Promise(resolve => setTimeout(resolve, 5000));
 
     await browser.close();
 
-    if (m3u8Url) {
-      res.json({ success: true, url: m3u8Url });
+    if (m3u8BaseUrl) {
+      res.json({ success: true, url: m3u8BaseUrl });
     } else {
-      res.status(404).json({ success: false, error: '❌ Não foi possível extrair o link m3u8.' });
+      res.status(404).json({ success: false, error: 'Master.m3u8 não encontrado via interceptação de .ts' });
     }
-
   } catch (err) {
-    res.status(500).json({ success: false, error: 'Erro no servidor: ' + err.message });
+    console.error('❌ Erro ao extrair o link:', err);
+    res.status(500).json({ success: false, error: err.message });
   }
 });
 
 app.get('/', (req, res) => {
-  res.send('✅ API de extração de link m3u8 ativa via lógica confiável do console');
+  res.send('✅ API Puppeteer Online - Use /api/getm3u8/{file_code}');
 });
 
 app.listen(PORT, () => {
-  console.log(`Servidor online em http://localhost:${PORT}`);
+  console.log(`🚀 Servidor iniciado em http://localhost:${PORT}`);
 });
