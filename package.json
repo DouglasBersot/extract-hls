@@ -5,7 +5,6 @@
   "main": "server.js",
   "license": "MIT",
   "scripts": {
-    "prestart": "puppeteer install",
     "start": "node server.js"
   },
   "dependencies": {
