@@ -1,6 +1,6 @@
 FROM node:22-bullseye
 
-# Instala dependências para Chromium
+# Instala bibliotecas necessárias para rodar o Chromium
 RUN apt-get update && apt-get install -y \
   wget \
   ca-certificates \
@@ -40,21 +40,20 @@ RUN apt-get update && apt-get install -y \
   --no-install-recommends && \
   apt-get clean && rm -rf /var/lib/apt/lists/*
 
-# Define diretório de trabalho
+# Cria diretório de trabalho
 WORKDIR /app
 
-# Evita erro de permissão no Render
-RUN npm config set unsafe-perm true
-
-# Copia package.json e instala dependências Node.js
+# Copia os arquivos de dependências
 COPY package*.json ./
+
+# Instala as dependências do Node.js
 RUN npm install
 
-# Copia todos os arquivos do projeto
+# Copia o restante dos arquivos do projeto
 COPY . .
 
-# Expõe a porta do servidor
+# Expõe a porta da API
 EXPOSE 3000
 
-# Comando para iniciar o servidor
+# Inicia o servidor
 CMD ["node", "server.js"]
