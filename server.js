@@ -1,10 +1,8 @@
 const express = require('express');
-const puppeteer = require('puppeteer');
-
+const puppeteer = require('puppeteer-core');
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// Endpoint principal: extrai o link .m3u8 com token válido
 app.get('/api/getm3u8/:code', async (req, res) => {
   const { code } = req.params;
   const url = `https://c1z39.com/bkg/${code}`;
@@ -12,6 +10,7 @@ app.get('/api/getm3u8/:code', async (req, res) => {
   try {
     const browser = await puppeteer.launch({
       headless: "new",
+      executablePath: '/opt/render/project/.render/chromium/chrome', // Chromium já instalado no Render
       args: [
         '--no-sandbox',
         '--disable-setuid-sandbox',
@@ -44,12 +43,10 @@ app.get('/api/getm3u8/:code', async (req, res) => {
   }
 });
 
-// Rota básica para confirmar que o servidor está online
 app.get('/', (req, res) => {
-  res.send('✅ API do Puppeteer está online. Use /api/getm3u8/{code}');
+  res.send('✅ API online usando puppeteer-core e Chrome do sistema.');
 });
 
-// Inicializa o servidor
 app.listen(PORT, () => {
-  console.log(`✅ Servidor rodando em http://localhost:${PORT}`);
+  console.log(`✅ Servidor rodando na porta ${PORT}`);
 });
