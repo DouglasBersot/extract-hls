@@ -1,7 +1,7 @@
 {
   "name": "extract-hls",
   "version": "1.0.0",
-  "description": "Extrator de master.m3u8 via Puppeteer e interceptação de segmentos TS",
+  "description": "Extrator de master.m3u8 via interceptação de segmentos .ts",
   "main": "server.js",
   "type": "commonjs",
   "scripts": {
