@@ -1,5 +1,7 @@
 const express = require('express');
 const puppeteer = require('puppeteer-core');
+const chromium = require('@sparticuz/chromium');
+
 const app = express();
 const PORT = process.env.PORT || 3000;
 
@@ -9,15 +11,9 @@ app.get('/api/getm3u8/:code', async (req, res) => {
 
   try {
     const browser = await puppeteer.launch({
-      headless: "new",
-      executablePath: '/opt/render/project/.render/chromium/chrome', // Chromium já instalado no Render
-      args: [
-        '--no-sandbox',
-        '--disable-setuid-sandbox',
-        '--disable-dev-shm-usage',
-        '--disable-gpu',
-        '--disable-software-rasterizer'
-      ]
+      headless: chromium.headless,
+      executablePath: await chromium.executablePath(),
+      args: chromium.args
     });
 
     const page = await browser.newPage();
@@ -44,7 +40,7 @@ app.get('/api/getm3u8/:code', async (req, res) => {
 });
 
 app.get('/', (req, res) => {
-  res.send('✅ API online usando puppeteer-core e Chrome do sistema.');
+  res.send('✅ API online com puppeteer-core + chromium (sparticuz).');
 });
 
 app.listen(PORT, () => {
