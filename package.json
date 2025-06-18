@@ -5,10 +5,14 @@
   "main": "server.js",
   "license": "MIT",
   "scripts": {
-    "start": "node server.js"
+    "start": "node server.js",
+    "postinstall": "puppeteer install"
   },
   "dependencies": {
     "express": "^4.18.2",
     "puppeteer": "^22.8.2"
+  },
+  "puppeteer": {
+    "default_browser_revision": "127674"
   }
 }
