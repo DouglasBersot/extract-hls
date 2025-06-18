@@ -13,10 +13,11 @@ app.get('/api/getm3u8/:code', async (req, res) => {
     console.log(`[+] Iniciando Chromium para: ${code}`);
 
     const browser = await puppeteer.launch({
-      headless: chromium.headless,
-      executablePath: await chromium.executablePath(),
-      args: chromium.args
-    });
+  headless: chromium.headless,
+  executablePath: process.env.CHROME_PATH || (await chromium.executablePath()),
+  args: chromium.args
+});
+
 
     console.log('[+] Chromium iniciado com sucesso');
     const page = await browser.newPage();
