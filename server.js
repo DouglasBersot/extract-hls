@@ -2,22 +2,22 @@ const express = require('express');
 const puppeteer = require('puppeteer');
 
 const app = express();
-const PORT = 3000;
+const PORT = process.env.PORT || 3000;
 
 app.get('/api/getm3u8/:code', async (req, res) => {
   const { code } = req.params;
-  const videoUrl = `https://c1z39.com/bkg/${code}`;
+  const url = `https://c1z39.com/bkg/${code}`;
 
   try {
     const browser = await puppeteer.launch({
       headless: true,
-      args: ['--no-sandbox', '--disable-setuid-sandbox'] // Necessário para hospedagens
+      args: ['--no-sandbox', '--disable-setuid-sandbox']
     });
 
     const page = await browser.newPage();
-    await page.goto(videoUrl, { waitUntil: 'networkidle2', timeout: 30000 });
+    await page.goto(url, { waitUntil: 'networkidle2', timeout: 30000 });
 
-    const link = await page.evaluate(() => {
+    const hls = await page.evaluate(() => {
       try {
         return jwplayer().getPlaylist()[0].file;
       } catch (e) {
@@ -27,8 +27,8 @@ app.get('/api/getm3u8/:code', async (req, res) => {
 
     await browser.close();
 
-    if (link && link.includes(".m3u8")) {
-      res.json({ success: true, code, url: link });
+    if (hls && hls.includes('.m3u8')) {
+      res.json({ success: true, url: hls });
     } else {
       res.status(404).json({ success: false, error: 'Link não encontrado' });
     }
@@ -37,6 +37,10 @@ app.get('/api/getm3u8/:code', async (req, res) => {
   }
 });
 
+app.get('/', (req, res) => {
+  res.send('API Puppeteer Online - Use /api/getm3u8/{file_code}');
+});
+
 app.listen(PORT, () => {
-  console.log(`✅ API rodando em http://localhost:${PORT}`);
+  console.log(`✅ Servidor iniciado em http://localhost:${PORT}`);
 });
