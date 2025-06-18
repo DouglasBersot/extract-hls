@@ -1,6 +1,7 @@
 {
   "name": "extract-hls",
   "version": "1.0.0",
+  "description": "Extrator automático de links m3u8 com token usando Puppeteer",
   "main": "server.js",
   "scripts": {
     "start": "node server.js"
