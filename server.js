@@ -4,14 +4,21 @@ const puppeteer = require('puppeteer');
 const app = express();
 const PORT = process.env.PORT || 3000;
 
+// Endpoint principal: extrai o link .m3u8 com token válido
 app.get('/api/getm3u8/:code', async (req, res) => {
   const { code } = req.params;
   const url = `https://c1z39.com/bkg/${code}`;
 
   try {
     const browser = await puppeteer.launch({
-      headless: true,
-      args: ['--no-sandbox', '--disable-setuid-sandbox']
+      headless: "new",
+      args: [
+        '--no-sandbox',
+        '--disable-setuid-sandbox',
+        '--disable-dev-shm-usage',
+        '--disable-gpu',
+        '--disable-software-rasterizer'
+      ]
     });
 
     const page = await browser.newPage();
@@ -30,17 +37,19 @@ app.get('/api/getm3u8/:code', async (req, res) => {
     if (hls && hls.includes('.m3u8')) {
       res.json({ success: true, url: hls });
     } else {
-      res.status(404).json({ success: false, error: 'Link não encontrado' });
+      res.status(404).json({ success: false, error: 'Link .m3u8 não encontrado.' });
     }
   } catch (err) {
     res.status(500).json({ success: false, error: err.message });
   }
 });
 
+// Rota básica para confirmar que o servidor está online
 app.get('/', (req, res) => {
-  res.send('API Puppeteer Online - Use /api/getm3u8/{file_code}');
+  res.send('✅ API do Puppeteer está online. Use /api/getm3u8/{code}');
 });
 
+// Inicializa o servidor
 app.listen(PORT, () => {
-  console.log(`✅ Servidor iniciado em http://localhost:${PORT}`);
+  console.log(`✅ Servidor rodando em http://localhost:${PORT}`);
 });
