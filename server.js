@@ -61,7 +61,6 @@ app.get('/proxy', async (req, res) => {
   if (!targetUrl) return res.status(400).send('URL ausente.');
 
   try {
-    // Se for playlist (.m3u8), pedimos como texto para reescrever links
     const isPlaylist = targetUrl.includes('.m3u8');
     const response = await got(targetUrl, {
       headers: {
@@ -76,24 +75,23 @@ app.get('/proxy', async (req, res) => {
       const base = new URL(targetUrl);
       base.pathname = base.pathname.substring(0, base.pathname.lastIndexOf('/') + 1);
 
-      // Reescreve URI da chave AES (ex: URI="https://dominio/encryption.key?...") para proxy
+      // 🔐 Reescreve URI da chave AES para proxy (forçando https)
       content = content.replace(/URI="([^"]+)"/g, (match, url) => {
         const absoluteUrl = url.startsWith('http') ? url : new URL(url, base).href;
-        return `URI="${req.protocol}://${req.get('host')}/proxy?m3u8=${encodeURIComponent(absoluteUrl)}"`;
+        return `URI="https://${req.get('host')}/proxy?m3u8=${encodeURIComponent(absoluteUrl)}"`;
       });
 
-      // Reescreve URLs relativas e absolutas de segmentos .ts e playlists .m3u8 para proxy
+      // 🔁 Reescreve links de .ts e .m3u8 (forçando https)
       content = content.replace(/^(?!#)(.*\.(ts|m3u8)(\?.*)?)$/gm, (match) => {
-        // Se for URL absoluta, mantém, senão concatena base
         const absoluteUrl = match.startsWith('http') ? match : new URL(match, base).href;
-        return `${req.protocol}://${req.get('host')}/proxy?m3u8=${encodeURIComponent(absoluteUrl)}`;
+        return `https://${req.get('host')}/proxy?m3u8=${encodeURIComponent(absoluteUrl)}`;
       });
 
       res.setHeader('Content-Type', 'application/vnd.apple.mpegurl');
       res.setHeader('Access-Control-Allow-Origin', '*');
       return res.send(content);
     } else {
-      // Para arquivos binários (.ts, .key, etc) repassa o buffer direto
+      // 🎥 Arquivos binários (ts, key, etc)
       res.setHeader('Content-Type', response.headers['content-type'] || 'application/octet-stream');
       res.setHeader('Access-Control-Allow-Origin', '*');
       return res.send(response.body);
