@@ -6,9 +6,9 @@ import got from 'got';
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-app.use(cors()); // Libera CORS para todas as origens
+app.use(cors());
 
-// 🔎 API que extrai o master.m3u8 de um código
+// 🔎 API que extrai o master.m3u8 a partir de um código
 app.get('/api/getm3u8/:code', async (req, res) => {
   const { code } = req.params;
   const targetUrl = `https://c1z39.com/bkg/${code}`;
@@ -21,10 +21,9 @@ app.get('/api/getm3u8/:code', async (req, res) => {
     });
 
     const page = await browser.newPage();
-
     let tsSegmentUrl = null;
 
-    page.on('request', (request) => {
+    page.on('request', request => {
       const url = request.url();
       if (url.includes('.ts')) {
         console.log('🎯 Interceptado .ts:', url);
@@ -40,7 +39,7 @@ app.get('/api/getm3u8/:code', async (req, res) => {
       if (video) video.click();
     });
 
-    await new Promise((resolve) => setTimeout(resolve, 5000));
+    await new Promise(resolve => setTimeout(resolve, 5000));
     await browser.close();
 
     if (tsSegmentUrl) {
@@ -56,34 +55,47 @@ app.get('/api/getm3u8/:code', async (req, res) => {
   }
 });
 
-// 🔁 Proxy inteligente que repassa .m3u8 ou .ts
+// 🔁 Proxy inteligente que reescreve playlists
 app.get('/proxy', async (req, res) => {
-  const m3u8Url = req.query.m3u8;
-  if (!m3u8Url) return res.status(400).send('URL ausente.');
+  const targetUrl = req.query.m3u8;
+  if (!targetUrl) return res.status(400).send('URL ausente.');
 
   try {
-    const response = await got.stream(m3u8Url, {
+    const response = await got(targetUrl, {
       headers: {
         'User-Agent': 'Mozilla/5.0',
-        Referer: 'https://c1z39.com/',
+        'Referer': 'https://c1z39.com/',
       },
+      responseType: 'text',
     });
 
-    response.on('error', (err) => {
-      console.error('Erro ao acessar conteúdo:', err.message);
-      res.status(502).send(`Erro ao acessar conteúdo. ${err.message}`);
-    });
+    let content = response.body;
+
+    if (targetUrl.includes('.m3u8')) {
+      // Reescreve as URLs de segmentos e playlists internas
+      const base = targetUrl.split('/').slice(0, -1).join('/');
+      content = content.replace(/^(?!#)(.*\.m3u8.*|.*\.ts.*)$/gm, match => {
+        const absolute = match.startsWith('http') ? match : `${base}/${match}`;
+        return `/proxy?m3u8=${encodeURIComponent(absolute)}`;
+      });
+
+      res.setHeader('Content-Type', 'application/vnd.apple.mpegurl');
+    } else {
+      // Conteúdo binário (ex: .ts)
+      res.setHeader('Content-Type', 'video/MP2T');
+    }
 
     res.setHeader('Access-Control-Allow-Origin', '*');
-    response.pipe(res);
+    res.send(content);
   } catch (err) {
-    console.error('Erro no proxy:', err.message);
+    console.error('Erro ao acessar conteúdo:', err.message);
     res.status(502).send(`Erro ao acessar conteúdo. ${err.message}`);
   }
 });
 
+// Página padrão
 app.get('/', (req, res) => {
-  res.send('🟢 API + Proxy online. Use /api/getm3u8/{code} ou /proxy?m3u8=...');
+  res.send('🟢 API + Proxy com reescrita HLS está rodando. Use /api/getm3u8/{code} e /proxy?m3u8=...');
 });
 
 app.listen(PORT, () => {
