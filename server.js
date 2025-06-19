@@ -11,36 +11,51 @@ app.get('/api/getm3u8/:code', async (req, res) => {
   try {
     const browser = await puppeteer.launch({
       headless: "new",
-      args: ['--no-sandbox', '--disable-setuid-sandbox']
+      args: [
+        '--no-sandbox',
+        '--disable-setuid-sandbox',
+        '--disable-dev-shm-usage',
+        '--disable-gpu',
+        '--disable-software-rasterizer'
+      ]
     });
+
     const page = await browser.newPage();
+    await page.goto(url, { waitUntil: 'networkidle2', timeout: 30000 });
 
-    let finalLink = null;
+    // Aguarda jwplayer estar disponível no DOM
+    await page.waitForFunction(
+      () => typeof jwplayer === 'function' && jwplayer().getPlaylist,
+      { timeout: 10000 }
+    );
 
-    // Intercepta todas as respostas de rede
-    page.on('response', async response => {
-      const responseUrl = response.url();
-      if (responseUrl.includes('.m3u8') && responseUrl.includes('?t=')) {
-        finalLink = responseUrl;
+    // Aguarda 2 segundos para garantir que a playlist seja carregada
+    await new Promise(resolve => setTimeout(resolve, 2000));
+
+    const hls = await page.evaluate(() => {
+      try {
+        return jwplayer().getPlaylist()[0].file;
+      } catch {
+        return null;
       }
     });
 
-    await page.goto(url, { waitUntil: 'networkidle2', timeout: 30000 });
-
-    // Simula clique no centro da tela para ativar o player
-    await page.mouse.click(500, 300).catch(() => {});
-    await page.waitForTimeout(5000);
-
     await browser.close();
 
-    if (finalLink) {
-      res.json({ success: true, url: finalLink });
+    if (hls && hls.includes('.m3u8')) {
+      res.json({ success: true, url: hls });
     } else {
-      res.status(404).json({ success: false, error: 'Link .m3u8 não encontrado via interceptação de rede' });
+      res.status(404).json({ success: false, error: 'Link .m3u8 não encontrado no player' });
     }
   } catch (err) {
     res.status(500).json({ success: false, error: err.message });
   }
 });
 
-app.listen(PORT, () => console.log(`✅ Servidor rodando na porta ${PORT}`));
+app.get('/', (req, res) => {
+  res.send('✅ API Puppeteer Online - Use /api/getm3u8/{file_code}');
+});
+
+app.listen(PORT, () => {
+  console.log(`✅ Servidor iniciado em http://localhost:${PORT}`);
+});
