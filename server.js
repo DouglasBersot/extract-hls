@@ -21,31 +21,38 @@ app.get('/api/getm3u8/:code', async (req, res) => {
     });
 
     const page = await browser.newPage();
-    await page.goto(url, { waitUntil: 'networkidle2', timeout: 30000 });
 
-    // Aguarda jwplayer estar disponível no DOM
-    await page.waitForFunction(
-      () => typeof jwplayer === 'function' && jwplayer().getPlaylist,
-      { timeout: 10000 }
-    );
+    let finalHLS = null;
 
-    // Aguarda 2 segundos para garantir que a playlist seja carregada
-    await new Promise(resolve => setTimeout(resolve, 2000));
-
-    const hls = await page.evaluate(() => {
-      try {
-        return jwplayer().getPlaylist()[0].file;
-      } catch {
-        return null;
+    // Intercepta todas as requisições de rede e filtra por .m3u8
+    page.on('request', req => {
+      const url = req.url();
+      if (url.includes('.m3u8') && url.includes('master')) {
+        finalHLS = url;
       }
     });
 
+    await page.goto(url, { waitUntil: 'networkidle2', timeout: 30000 });
+
+    // Espera o player carregar e executa play
+    await page.waitForFunction(() => typeof jwplayer === 'function', { timeout: 10000 });
+
+    await page.evaluate(() => {
+      try {
+        const player = jwplayer();
+        player.play();
+      } catch (e) {}
+    });
+
+    // Aguarda um tempo para o player fazer as requisições
+    await page.waitForTimeout(5000);
+
     await browser.close();
 
-    if (hls && hls.includes('.m3u8')) {
-      res.json({ success: true, url: hls });
+    if (finalHLS) {
+      res.json({ success: true, url: finalHLS });
     } else {
-      res.status(404).json({ success: false, error: 'Link .m3u8 não encontrado no player' });
+      res.status(404).json({ success: false, error: 'Link não encontrado na rede' });
     }
   } catch (err) {
     res.status(500).json({ success: false, error: err.message });
@@ -53,7 +60,7 @@ app.get('/api/getm3u8/:code', async (req, res) => {
 });
 
 app.get('/', (req, res) => {
-  res.send('✅ API Puppeteer Online - Use /api/getm3u8/{file_code}');
+  res.send('API Puppeteer Online - Use /api/getm3u8/{file_code}');
 });
 
 app.listen(PORT, () => {
