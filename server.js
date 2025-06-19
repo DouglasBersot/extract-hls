@@ -1,14 +1,14 @@
-const express = require('express');
-const puppeteer = require('puppeteer');
-const axios = require('axios');
-const cors = require('cors');
+import express from 'express';
+import cors from 'cors';
+import puppeteer from 'puppeteer';
+import got from 'got';
 
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-app.use(cors()); // Libera CORS para todas as rotas
+app.use(cors()); // Libera CORS para todas as origens
 
-// API para extrair link master.m3u8 válido
+// 🔎 API que extrai o master.m3u8 de um código
 app.get('/api/getm3u8/:code', async (req, res) => {
   const { code } = req.params;
   const targetUrl = `https://c1z39.com/bkg/${code}`;
@@ -17,14 +17,14 @@ app.get('/api/getm3u8/:code', async (req, res) => {
     console.log('🔧 Iniciando Puppeteer...');
     const browser = await puppeteer.launch({
       headless: 'new',
-      args: ['--no-sandbox', '--disable-setuid-sandbox']
+      args: ['--no-sandbox', '--disable-setuid-sandbox'],
     });
 
     const page = await browser.newPage();
 
     let tsSegmentUrl = null;
 
-    page.on('request', request => {
+    page.on('request', (request) => {
       const url = request.url();
       if (url.includes('.ts')) {
         console.log('🎯 Interceptado .ts:', url);
@@ -40,9 +40,7 @@ app.get('/api/getm3u8/:code', async (req, res) => {
       if (video) video.click();
     });
 
-    // Espera 5 segundos para os segmentos .ts começarem a carregar
-    await new Promise(resolve => setTimeout(resolve, 5000));
-
+    await new Promise((resolve) => setTimeout(resolve, 5000));
     await browser.close();
 
     if (tsSegmentUrl) {
@@ -58,40 +56,36 @@ app.get('/api/getm3u8/:code', async (req, res) => {
   }
 });
 
-// Proxy para qualquer URL (m3u8, ts, etc) para evitar CORS e IP binding
+// 🔁 Proxy inteligente que repassa .m3u8 ou .ts
 app.get('/proxy', async (req, res) => {
-  const { url } = req.query;
-  if (!url) {
-    return res.status(400).send('Parâmetro "url" é obrigatório');
-  }
+  const m3u8Url = req.query.m3u8;
+  if (!m3u8Url) return res.status(400).send('URL ausente.');
 
   try {
-    console.log('🌐 Proxy para URL:', url);
-
-    const response = await axios.get(url, {
-      responseType: 'stream',
+    const response = await got.stream(m3u8Url, {
       headers: {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)',
-        'Accept': '*/*',
-        'Referer': 'https://c1z39.com/', // importante para evitar bloqueios
+        'User-Agent': 'Mozilla/5.0',
+        Referer: 'https://c1z39.com/',
       },
-      timeout: 15000,
     });
 
-    res.setHeader('Content-Type', response.headers['content-type'] || 'application/octet-stream');
-    res.setHeader('Access-Control-Allow-Origin', '*');
+    response.on('error', (err) => {
+      console.error('Erro ao acessar conteúdo:', err.message);
+      res.status(502).send(`Erro ao acessar conteúdo. ${err.message}`);
+    });
 
-    response.data.pipe(res);
-  } catch (error) {
-    console.error('❌ Erro no proxy:', error.message);
-    res.status(500).send('Erro ao acessar conteúdo proxy');
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    response.pipe(res);
+  } catch (err) {
+    console.error('Erro no proxy:', err.message);
+    res.status(502).send(`Erro ao acessar conteúdo. ${err.message}`);
   }
 });
 
 app.get('/', (req, res) => {
-  res.send('API Puppeteer + Proxy rodando. Use /api/getm3u8/{code} e /proxy?url=URL_DO_RECURSO');
+  res.send('🟢 API + Proxy online. Use /api/getm3u8/{code} ou /proxy?m3u8=...');
 });
 
 app.listen(PORT, () => {
-  console.log(`🚀 Servidor rodando em http://localhost:${PORT}`);
+  console.log(`🚀 Servidor rodando na porta ${PORT}`);
 });
