@@ -1,11 +1,12 @@
 const express = require('express');
 const puppeteer = require('puppeteer');
-const cors = require('cors'); // ✅ Importa o CORS
+const cors = require('cors');  // ✅ Importa CORS
+const got = require('got');    // ✅ Para fazer proxy HTTP
 
 const app = express();
-const PORT = 3000;
+const PORT = process.env.PORT || 3000;
 
-app.use(cors()); // ✅ Ativa o CORS para todas as origens
+app.use(cors()); // ✅ Ativa CORS para todas as origens
 
 app.get('/api/getm3u8/:code', async (req, res) => {
   const { code } = req.params;
@@ -55,10 +56,39 @@ app.get('/api/getm3u8/:code', async (req, res) => {
   }
 });
 
+// Rota proxy para master.m3u8 e segmentos .ts
+// Use /proxy?url=URL_ENCODED
+app.get('/proxy', async (req, res) => {
+  const url = req.query.url;
+  if (!url) return res.status(400).send('URL não informada');
+
+  try {
+    console.log('🔗 Proxy para:', url);
+
+    const response = await got.stream(url);
+
+    res.setHeader('Content-Type', response.headers['content-type'] || 'application/vnd.apple.mpegurl');
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    if (response.headers['cache-control']) res.setHeader('Cache-Control', response.headers['cache-control']);
+    if (response.headers['content-length']) res.setHeader('Content-Length', response.headers['content-length']);
+
+    response.pipe(res);
+
+    response.on('error', err => {
+      console.error('❌ Erro no proxy:', err.message);
+      if (!res.headersSent) res.status(500).send('Erro ao acessar conteúdo');
+    });
+
+  } catch (error) {
+    console.error('❌ Erro no proxy:', error.message);
+    res.status(500).send('Erro ao acessar conteúdo');
+  }
+});
+
 app.get('/', (req, res) => {
-  res.send('API local - use /api/getm3u8/{code}');
+  res.send('API Puppeteer + Proxy Online - Use /api/getm3u8/{code} e /proxy?url=');
 });
 
 app.listen(PORT, () => {
-  console.log(`🚀 Servidor rodando localmente: http://localhost:${PORT}`);
+  console.log(`🚀 Servidor rodando na porta ${PORT}`);
 });
