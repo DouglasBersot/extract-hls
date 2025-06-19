@@ -1,13 +1,14 @@
 const express = require('express');
 const puppeteer = require('puppeteer');
-const cors = require('cors');  // ✅ Importa CORS
-const got = require('got');    // ✅ Para fazer proxy HTTP
+const axios = require('axios');
+const cors = require('cors');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-app.use(cors()); // ✅ Ativa CORS para todas as origens
+app.use(cors()); // Libera CORS para todas as rotas
 
+// API para extrair link master.m3u8 válido
 app.get('/api/getm3u8/:code', async (req, res) => {
   const { code } = req.params;
   const targetUrl = `https://c1z39.com/bkg/${code}`;
@@ -39,6 +40,7 @@ app.get('/api/getm3u8/:code', async (req, res) => {
       if (video) video.click();
     });
 
+    // Espera 5 segundos para os segmentos .ts começarem a carregar
     await new Promise(resolve => setTimeout(resolve, 5000));
 
     await browser.close();
@@ -56,39 +58,40 @@ app.get('/api/getm3u8/:code', async (req, res) => {
   }
 });
 
-// Rota proxy para master.m3u8 e segmentos .ts
-// Use /proxy?url=URL_ENCODED
+// Proxy para qualquer URL (m3u8, ts, etc) para evitar CORS e IP binding
 app.get('/proxy', async (req, res) => {
-  const url = req.query.url;
-  if (!url) return res.status(400).send('URL não informada');
+  const { url } = req.query;
+  if (!url) {
+    return res.status(400).send('Parâmetro "url" é obrigatório');
+  }
 
   try {
-    console.log('🔗 Proxy para:', url);
+    console.log('🌐 Proxy para URL:', url);
 
-    const response = await got.stream(url);
-
-    res.setHeader('Content-Type', response.headers['content-type'] || 'application/vnd.apple.mpegurl');
-    res.setHeader('Access-Control-Allow-Origin', '*');
-    if (response.headers['cache-control']) res.setHeader('Cache-Control', response.headers['cache-control']);
-    if (response.headers['content-length']) res.setHeader('Content-Length', response.headers['content-length']);
-
-    response.pipe(res);
-
-    response.on('error', err => {
-      console.error('❌ Erro no proxy:', err.message);
-      if (!res.headersSent) res.status(500).send('Erro ao acessar conteúdo');
+    const response = await axios.get(url, {
+      responseType: 'stream',
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)',
+        'Accept': '*/*',
+        'Referer': 'https://c1z39.com/', // importante para evitar bloqueios
+      },
+      timeout: 15000,
     });
 
+    res.setHeader('Content-Type', response.headers['content-type'] || 'application/octet-stream');
+    res.setHeader('Access-Control-Allow-Origin', '*');
+
+    response.data.pipe(res);
   } catch (error) {
     console.error('❌ Erro no proxy:', error.message);
-    res.status(500).send('Erro ao acessar conteúdo');
+    res.status(500).send('Erro ao acessar conteúdo proxy');
   }
 });
 
 app.get('/', (req, res) => {
-  res.send('API Puppeteer + Proxy Online - Use /api/getm3u8/{code} e /proxy?url=');
+  res.send('API Puppeteer + Proxy rodando. Use /api/getm3u8/{code} e /proxy?url=URL_DO_RECURSO');
 });
 
 app.listen(PORT, () => {
-  console.log(`🚀 Servidor rodando na porta ${PORT}`);
+  console.log(`🚀 Servidor rodando em http://localhost:${PORT}`);
 });
