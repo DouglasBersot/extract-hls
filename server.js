@@ -1,43 +1,61 @@
+const express = require('express');
+const puppeteer = require('puppeteer');
+
+const app = express();
+const PORT = 3000;
+
 app.get('/api/getm3u8/:code', async (req, res) => {
   const { code } = req.params;
-  const url = `https://c1z39.com/bkg/${code}`;
+  const targetUrl = `https://c1z39.com/bkg/${code}`;
 
   try {
-    const executablePath = puppeteer.executablePath();
-    console.log('Chromium path:', executablePath); // <-- AQUI
-
+    console.log('🔧 Iniciando Puppeteer...');
     const browser = await puppeteer.launch({
-      headless: "new",
-      executablePath,
-      args: [
-        '--no-sandbox',
-        '--disable-setuid-sandbox',
-        '--disable-dev-shm-usage',
-        '--disable-gpu',
-        '--disable-software-rasterizer'
-      ]
+      headless: 'new',
+      args: ['--no-sandbox', '--disable-setuid-sandbox']
     });
 
     const page = await browser.newPage();
-    await page.goto(url, { waitUntil: 'networkidle2', timeout: 30000 });
 
-    const hls = await page.evaluate(() => {
-      try {
-        return jwplayer().getPlaylist()[0].file;
-      } catch (e) {
-        return null;
+    let tsSegmentUrl = null;
+
+    page.on('request', request => {
+      const url = request.url();
+      if (url.includes('.ts')) {
+        console.log('🎯 Interceptado .ts:', url);
+        if (!tsSegmentUrl) tsSegmentUrl = url;
       }
     });
 
+    console.log('🌐 Acessando:', targetUrl);
+    await page.goto(targetUrl, { waitUntil: 'networkidle2', timeout: 30000 });
+
+    await page.evaluate(() => {
+      const video = document.querySelector('video');
+      if (video) video.click();
+    });
+
+    await new Promise(resolve => setTimeout(resolve, 5000));
+
     await browser.close();
 
-    if (hls && hls.includes('.m3u8')) {
-      res.json({ success: true, url: hls });
+    if (tsSegmentUrl) {
+      const masterUrl = tsSegmentUrl.replace(/\/[^/]+\.ts/, '/master.m3u8');
+      console.log('✅ Reconstruído:', masterUrl);
+      return res.json({ success: true, url: masterUrl });
     } else {
-      res.status(404).json({ success: false, error: 'Link não encontrado' });
+      return res.status(404).json({ success: false, error: 'Segmento .ts não encontrado' });
     }
-  } catch (err) {
-    console.error('Erro na rota /api/getm3u8:', err);
-    res.status(500).json({ success: false, error: err.message });
+  } catch (error) {
+    console.error('❌ Erro:', error);
+    return res.status(500).json({ success: false, error: error.message });
   }
+});
+
+app.get('/', (req, res) => {
+  res.send('API local - use /api/getm3u8/{code}');
+});
+
+app.listen(PORT, () => {
+  console.log(`🚀 Servidor rodando localmente: http://localhost:${PORT}`);
 });
