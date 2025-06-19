@@ -1,16 +1,14 @@
-const express = require('express');
-const puppeteer = require('puppeteer');
-
-const app = express();
-const PORT = process.env.PORT || 3000;
-
 app.get('/api/getm3u8/:code', async (req, res) => {
   const { code } = req.params;
   const url = `https://c1z39.com/bkg/${code}`;
 
   try {
+    const executablePath = puppeteer.executablePath();
+    console.log('Chromium path:', executablePath); // <-- AQUI
+
     const browser = await puppeteer.launch({
       headless: "new",
+      executablePath,
       args: [
         '--no-sandbox',
         '--disable-setuid-sandbox',
@@ -23,15 +21,13 @@ app.get('/api/getm3u8/:code', async (req, res) => {
     const page = await browser.newPage();
     await page.goto(url, { waitUntil: 'networkidle2', timeout: 30000 });
 
-    // Espera até que o jwplayer esteja totalmente carregado
-    await page.waitForFunction(() => {
-      return typeof jwplayer === 'function' &&
-             jwplayer().getPlaylist &&
-             jwplayer().getPlaylist().length > 0 &&
-             jwplayer().getPlaylist()[0].file;
-    }, { timeout: 10000 });
-
-    const hls = await page.evaluate(() => jwplayer().getPlaylist()[0].file);
+    const hls = await page.evaluate(() => {
+      try {
+        return jwplayer().getPlaylist()[0].file;
+      } catch (e) {
+        return null;
+      }
+    });
 
     await browser.close();
 
@@ -41,14 +37,7 @@ app.get('/api/getm3u8/:code', async (req, res) => {
       res.status(404).json({ success: false, error: 'Link não encontrado' });
     }
   } catch (err) {
+    console.error('Erro na rota /api/getm3u8:', err);
     res.status(500).json({ success: false, error: err.message });
   }
-});
-
-app.get('/', (req, res) => {
-  res.send('API Puppeteer Online - Use /api/getm3u8/{file_code}');
-});
-
-app.listen(PORT, () => {
-  console.log(`✅ Servidor iniciado em http://localhost:${PORT}`);
 });
