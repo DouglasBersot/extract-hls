@@ -1,8 +1,11 @@
 const express = require('express');
 const puppeteer = require('puppeteer');
+const cors = require('cors'); // ✅ Importa o CORS
 
 const app = express();
 const PORT = 3000;
+
+app.use(cors()); // ✅ Ativa o CORS para todas as origens
 
 app.get('/api/getm3u8/:code', async (req, res) => {
   const { code } = req.params;
