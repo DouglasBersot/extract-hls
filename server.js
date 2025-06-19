@@ -1,3 +1,4 @@
+// 📦 Módulos
 import express from 'express';
 import cors from 'cors';
 import puppeteer from 'puppeteer';
@@ -8,9 +9,22 @@ const PORT = process.env.PORT || 3000;
 
 app.use(cors());
 
+// 🧠 Cache em memória
+const masterCache = new Map(); // { code: { url, expiresAt } }
+const proxyCache = new Map();  // { url: { body, contentType, expiresAt } }
+
 // 🔎 API que extrai o master.m3u8 a partir de um código
 app.get('/api/getm3u8/:code', async (req, res) => {
   const { code } = req.params;
+  const now = Date.now();
+
+  // Verifica cache do master.m3u8
+  const cached = masterCache.get(code);
+  if (cached && cached.expiresAt > now) {
+    console.log('✅ Master.m3u8 cache HIT para', code);
+    return res.json({ success: true, url: cached.url });
+  }
+
   const targetUrl = `https://c1z39.com/bkg/${code}`;
 
   try {
@@ -33,7 +47,6 @@ app.get('/api/getm3u8/:code', async (req, res) => {
 
     console.log('🌐 Acessando:', targetUrl);
     await page.goto(targetUrl, { waitUntil: 'networkidle2', timeout: 30000 });
-
     await page.evaluate(() => {
       const video = document.querySelector('video');
       if (video) video.click();
@@ -44,7 +57,11 @@ app.get('/api/getm3u8/:code', async (req, res) => {
 
     if (tsSegmentUrl) {
       const masterUrl = tsSegmentUrl.replace(/\/[^/]+\.ts/, '/master.m3u8');
-      console.log('✅ Reconstruído:', masterUrl);
+      masterCache.set(code, {
+        url: masterUrl,
+        expiresAt: now + 3 * 60 * 60 * 1000,
+      });
+      console.log('✅ Reconstruído e salvo em cache:', masterUrl);
       return res.json({ success: true, url: masterUrl });
     } else {
       return res.status(404).json({ success: false, error: 'Segmento .ts não encontrado' });
@@ -55,13 +72,22 @@ app.get('/api/getm3u8/:code', async (req, res) => {
   }
 });
 
-// 🔁 Proxy inteligente que reescreve playlists e repassa arquivos (.ts, .key, etc)
+// 🔁 Proxy inteligente com reescrita e cache
 app.get('/proxy', async (req, res) => {
   const targetUrl = req.query.m3u8;
   if (!targetUrl) return res.status(400).send('URL ausente.');
+  const now = Date.now();
+
+  const isPlaylist = targetUrl.includes('.m3u8');
+  const cacheEntry = proxyCache.get(targetUrl);
+  if (cacheEntry && cacheEntry.expiresAt > now) {
+    console.log('✅ Proxy cache HIT:', targetUrl);
+    res.setHeader('Content-Type', cacheEntry.contentType);
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    return res.send(cacheEntry.body);
+  }
 
   try {
-    const isPlaylist = targetUrl.includes('.m3u8');
     const response = await got(targetUrl, {
       headers: {
         'User-Agent': 'Mozilla/5.0',
@@ -75,23 +101,32 @@ app.get('/proxy', async (req, res) => {
       const base = new URL(targetUrl);
       base.pathname = base.pathname.substring(0, base.pathname.lastIndexOf('/') + 1);
 
-      // 🔐 Reescreve URI da chave AES para proxy (forçando https)
       content = content.replace(/URI="([^"]+)"/g, (match, url) => {
-        const absoluteUrl = url.startsWith('http') ? url : new URL(url, base).href;
-        return `URI="https://${req.get('host')}/proxy?m3u8=${encodeURIComponent(absoluteUrl)}"`;
+        const absolute = url.startsWith('http') ? url : new URL(url, base).href;
+        return `URI="https://${req.get('host')}/proxy?m3u8=${encodeURIComponent(absolute)}"`;
       });
 
-      // 🔁 Reescreve links de .ts e .m3u8 (forçando https)
-      content = content.replace(/^(?!#)(.*\.(ts|m3u8)(\?.*)?)$/gm, (match) => {
-        const absoluteUrl = match.startsWith('http') ? match : new URL(match, base).href;
-        return `https://${req.get('host')}/proxy?m3u8=${encodeURIComponent(absoluteUrl)}`;
+      content = content.replace(/^(?!#)(.*\.(ts|m3u8)(\?.*)?)$/gm, match => {
+        const absolute = match.startsWith('http') ? match : new URL(match, base).href;
+        return `https://${req.get('host')}/proxy?m3u8=${encodeURIComponent(absolute)}`;
+      });
+
+      proxyCache.set(targetUrl, {
+        body: content,
+        contentType: 'application/vnd.apple.mpegurl',
+        expiresAt: now + 3 * 60 * 60 * 1000,
       });
 
       res.setHeader('Content-Type', 'application/vnd.apple.mpegurl');
       res.setHeader('Access-Control-Allow-Origin', '*');
       return res.send(content);
     } else {
-      // 🎥 Arquivos binários (ts, key, etc)
+      proxyCache.set(targetUrl, {
+        body: response.body,
+        contentType: response.headers['content-type'] || 'application/octet-stream',
+        expiresAt: now + 3 * 60 * 60 * 1000,
+      });
+
       res.setHeader('Content-Type', response.headers['content-type'] || 'application/octet-stream');
       res.setHeader('Access-Control-Allow-Origin', '*');
       return res.send(response.body);
@@ -102,9 +137,9 @@ app.get('/proxy', async (req, res) => {
   }
 });
 
-// Página padrão
+// 🔰 Rota raiz
 app.get('/', (req, res) => {
-  res.send('🟢 API + Proxy com reescrita HLS está rodando. Use /api/getm3u8/{code} e /proxy?m3u8=...');
+  res.send('🟢 API + Proxy com cache e reescrita HLS online. Use /api/getm3u8/{code} ou /proxy?m3u8=...');
 });
 
 app.listen(PORT, () => {
