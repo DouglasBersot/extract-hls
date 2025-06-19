@@ -55,41 +55,52 @@ app.get('/api/getm3u8/:code', async (req, res) => {
   }
 });
 
-// 🔁 Proxy inteligente que reescreve playlists
+// 🔁 Proxy inteligente que reescreve playlists e repassa arquivos (.ts, .key, etc)
 app.get('/proxy', async (req, res) => {
   const targetUrl = req.query.m3u8;
   if (!targetUrl) return res.status(400).send('URL ausente.');
 
   try {
+    // Se for playlist (.m3u8), pedimos como texto para reescrever links
+    const isPlaylist = targetUrl.includes('.m3u8');
     const response = await got(targetUrl, {
       headers: {
         'User-Agent': 'Mozilla/5.0',
         'Referer': 'https://c1z39.com/',
       },
-      responseType: 'text',
+      responseType: isPlaylist ? 'text' : 'buffer',
     });
 
-    let content = response.body;
+    if (isPlaylist) {
+      let content = response.body;
+      const base = new URL(targetUrl);
+      base.pathname = base.pathname.substring(0, base.pathname.lastIndexOf('/') + 1);
 
-    if (targetUrl.includes('.m3u8')) {
-      // Reescreve as URLs de segmentos e playlists internas
-      const base = targetUrl.split('/').slice(0, -1).join('/');
-      content = content.replace(/^(?!#)(.*\.m3u8.*|.*\.ts.*)$/gm, match => {
-        const absolute = match.startsWith('http') ? match : `${base}/${match}`;
-        return `/proxy?m3u8=${encodeURIComponent(absolute)}`;
+      // Reescreve URI da chave AES (ex: URI="https://dominio/encryption.key?...") para proxy
+      content = content.replace(/URI="([^"]+)"/g, (match, url) => {
+        const absoluteUrl = url.startsWith('http') ? url : new URL(url, base).href;
+        return `URI="${req.protocol}://${req.get('host')}/proxy?m3u8=${encodeURIComponent(absoluteUrl)}"`;
+      });
+
+      // Reescreve URLs relativas e absolutas de segmentos .ts e playlists .m3u8 para proxy
+      content = content.replace(/^(?!#)(.*\.(ts|m3u8)(\?.*)?)$/gm, (match) => {
+        // Se for URL absoluta, mantém, senão concatena base
+        const absoluteUrl = match.startsWith('http') ? match : new URL(match, base).href;
+        return `${req.protocol}://${req.get('host')}/proxy?m3u8=${encodeURIComponent(absoluteUrl)}`;
       });
 
       res.setHeader('Content-Type', 'application/vnd.apple.mpegurl');
+      res.setHeader('Access-Control-Allow-Origin', '*');
+      return res.send(content);
     } else {
-      // Conteúdo binário (ex: .ts)
-      res.setHeader('Content-Type', 'video/MP2T');
+      // Para arquivos binários (.ts, .key, etc) repassa o buffer direto
+      res.setHeader('Content-Type', response.headers['content-type'] || 'application/octet-stream');
+      res.setHeader('Access-Control-Allow-Origin', '*');
+      return res.send(response.body);
     }
-
-    res.setHeader('Access-Control-Allow-Origin', '*');
-    res.send(content);
   } catch (err) {
     console.error('Erro ao acessar conteúdo:', err.message);
-    res.status(502).send(`Erro ao acessar conteúdo. ${err.message}`);
+    return res.status(502).send(`Erro ao acessar conteúdo. ${err.message}`);
   }
 });
 
