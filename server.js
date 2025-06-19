@@ -17,20 +17,20 @@ app.get('/api/getm3u8/:code', async (req, res) => {
     const page = await browser.newPage();
     await page.goto(url, { waitUntil: 'networkidle2', timeout: 30000 });
 
-    // Espera o jwplayer estar disponível
+    // Espera até que o jwplayer esteja definido
     await page.waitForFunction(() => typeof jwplayer !== 'undefined', { timeout: 10000 });
 
-    // Dá play no vídeo para forçar atualização do token
+    // Dá play no player
     await page.evaluate(() => {
       try {
         jwplayer().play();
       } catch (e) {}
     });
 
-    // Aguarda 4 segundos para garantir atualização do link
-    await new Promise(resolve => setTimeout(resolve, 4000));
+    // Espera mais um pouco para o token .m3u8 ser atualizado
+    await page.waitForTimeout(4000);
 
-    // Extrai o link atualizado
+    // Extrai o .m3u8 atualizado
     const m3u8Url = await page.evaluate(() => {
       try {
         return jwplayer().getPlaylist()[0].file;
@@ -56,6 +56,4 @@ app.get('/', (req, res) => {
   res.send('✅ API de extração de link m3u8 ativa');
 });
 
-app.listen(PORT, () => {
-  console.log(`Servidor rodando em http://localhost:${PORT}`);
-});
+app.listen(PORT, () => console.log(`Servidor rodando em http://localhost:${PORT}`));
