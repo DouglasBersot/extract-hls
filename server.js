@@ -21,38 +21,38 @@ app.get('/api/getm3u8/:code', async (req, res) => {
     });
 
     const page = await browser.newPage();
-
-    let finalHLS = null;
-
-    // Intercepta todas as requisições de rede e filtra por .m3u8
-    page.on('request', req => {
-      const url = req.url();
-      if (url.includes('.m3u8') && url.includes('master')) {
-        finalHLS = url;
-      }
-    });
-
     await page.goto(url, { waitUntil: 'networkidle2', timeout: 30000 });
 
-    // Espera o player carregar e executa play
-    await page.waitForFunction(() => typeof jwplayer === 'function', { timeout: 10000 });
+    // Garante que o jwplayer está pronto
+    await page.waitForFunction(() => {
+      return typeof jwplayer === 'function' &&
+             jwplayer().getPlaylist &&
+             jwplayer().getPlaylist().length > 0;
+    }, { timeout: 10000 });
 
-    await page.evaluate(() => {
-      try {
-        const player = jwplayer();
-        player.play();
-      } catch (e) {}
+    // Toca o vídeo e espera o evento 'play' antes de capturar a URL
+    const hls = await page.evaluate(() => {
+      return new Promise(resolve => {
+        try {
+          const player = jwplayer();
+          player.on('play', () => {
+            setTimeout(() => {
+              resolve(player.getPlaylist()[0].file);
+            }, 1500); // pequeno delay extra para garantir que token foi gerado
+          });
+          player.play();
+        } catch (e) {
+          resolve(null);
+        }
+      });
     });
-
-    // Aguarda um tempo para o player fazer as requisições
-    await page.waitForTimeout(5000);
 
     await browser.close();
 
-    if (finalHLS) {
-      res.json({ success: true, url: finalHLS });
+    if (hls && hls.includes('.m3u8')) {
+      res.json({ success: true, url: hls });
     } else {
-      res.status(404).json({ success: false, error: 'Link não encontrado na rede' });
+      res.status(404).json({ success: false, error: 'Link não encontrado ou player não respondeu' });
     }
   } catch (err) {
     res.status(500).json({ success: false, error: err.message });
