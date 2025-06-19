@@ -1,16 +1,16 @@
 {
   "name": "extract-hls",
   "version": "1.0.0",
-  "description": "API Puppeteer + Proxy para extrair links HLS e servir conteúdo com proxy",
+  "description": "API que extrai o master.m3u8 e serve via proxy",
   "main": "server.js",
-  "type": "commonjs",
+  "type": "module",
   "scripts": {
     "start": "node server.js"
   },
   "dependencies": {
-    "axios": "^1.4.0",
     "cors": "^2.8.5",
     "express": "^4.18.2",
-    "puppeteer": "^22.4.0"
+    "got": "^13.0.0",
+    "puppeteer": "^22.6.3"
   }
 }
