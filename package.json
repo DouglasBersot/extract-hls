@@ -1,16 +1,15 @@
 {
   "name": "extract-hls",
   "version": "1.0.0",
-  "description": "Extrator de master.m3u8 local com Puppeteer",
+  "description": "Extrator de master.m3u8 via Puppeteer e interceptação de segmentos TS",
   "main": "server.js",
   "type": "commonjs",
   "scripts": {
     "start": "node server.js"
   },
   "dependencies": {
-  "@sparticuz/chromium": "^112.0.0",
-  "cors": "^2.8.5",
-  "express": "^4.18.2",
-  "puppeteer-core": "^22.6.3"
+    "express": "^4.18.2",
+    "puppeteer": "^22.8.2",
+    "cors": "^2.8.5"   
   }
 }
