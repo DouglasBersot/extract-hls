@@ -62,6 +62,19 @@ app.use((req, res, next) => {
   next();
 });
 
+// 📊 Rota de estatísticas para o dashboard externo
+app.get('/stats', (req, res) => {
+  res.json({
+    totalRequests: stats.totalRequests,
+    apiHits: stats.apiHits,
+    proxyHits: stats.proxyHits,
+    cacheHits: stats.cacheHits,
+    cacheMisses: stats.cacheMisses,
+    uniqueIPs: stats.uniqueIPs.size,
+    errors: stats.errors.slice(-10),
+  });
+});
+
 // 🧠 Cache
 const masterCache = new Map();
 const proxyCache = new Map();
@@ -194,39 +207,6 @@ app.get('/proxy', async (req, res) => {
     stats.errors.push(err.message);
     return res.status(502).send(`Erro ao acessar conteúdo. ${err.message}`);
   }
-});
-
-// 📊 Dashboard visual
-app.get('/dashboard', (req, res) => {
-  res.send(`<!DOCTYPE html>
-  <html lang="pt-BR">
-  <head>
-    <meta charset="UTF-8">
-    <title>Dashboard</title>
-    <style>
-      body { background: #111; color: #eee; font-family: sans-serif; padding: 20px; }
-      h1 { color: #0f0; }
-      table { width: 100%; margin-top: 20px; border-collapse: collapse; }
-      td, th { border: 1px solid #333; padding: 8px; text-align: left; }
-      .error { color: #f33; }
-    </style>
-  </head>
-  <body>
-    <h1>📊 Estatísticas da API</h1>
-    <ul>
-      <li>📈 Total de requisições: <strong>${stats.totalRequests}</strong></li>
-      <li>🧑‍💻 IPs únicos: <strong>${stats.uniqueIPs.size}</strong></li>
-      <li>🎯 /api/getm3u8: <strong>${stats.apiHits}</strong></li>
-      <li>🔁 /proxy: <strong>${stats.proxyHits}</strong></li>
-      <li>🟢 Cache HITs: <strong>${stats.cacheHits}</strong></li>
-      <li>🔴 Cache MISSes: <strong>${stats.cacheMisses}</strong></li>
-    </ul>
-    <h2>🧯 Últimos erros</h2>
-    <ul class="error">
-      ${stats.errors.slice(-10).map(e => `<li>${e}</li>`).join('') || '<li>Sem erros</li>'}
-    </ul>
-  </body>
-  </html>`);
 });
 
 // 🔰 Página padrão
