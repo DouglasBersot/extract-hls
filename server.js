@@ -5,7 +5,6 @@ import puppeteer from 'puppeteer';
 import got from 'got';
 import helmet from 'helmet';
 import rateLimit from 'express-rate-limit';
-import timeout from 'express-timeout-handler';
 import compression from 'compression';
 
 const app = express();
@@ -26,13 +25,6 @@ const limiter = rateLimit({
   max: 300,
 });
 app.use(limiter);
-
-// 🧯 Timeout global para requisições
-app.use(timeout.handler({
-  timeout: 25_000,
-  onTimeout: (req, res) => res.status(503).send('⏱️ Tempo limite excedido.'),
-  disable: ['write', 'setHeaders', 'send'],
-}));
 
 // 🗜️ Compressão GZIP
 app.use(compression());
