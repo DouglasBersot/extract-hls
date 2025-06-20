@@ -1,0 +1,7 @@
+[tool.nixpacks]
+
+[tool.nixpacks.phases.setup]
+packages = ["ffmpeg"]  # se mais pacotes forem necessários, adicione aqui
+
+[tool.nixpacks.env]
+NODE_VERSION = "20.x"
