@@ -10,6 +10,8 @@ import compression from 'compression';
 const app = express();
 const PORT = process.env.PORT || 3000;
 
+app.set('trust proxy', 1); // ✅ Importante para funcionar o rate-limit corretamente
+
 // 🛡️ Segurança HTTP
 app.use(helmet());
 
