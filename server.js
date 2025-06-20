@@ -51,6 +51,8 @@ const stats = {
   uniqueIPs: new Set(),
   errors: [],
 };
+const recentCodes = [];
+const startedAt = new Date();
 
 app.use((req, res, next) => {
   stats.totalRequests++;
@@ -72,6 +74,9 @@ app.get('/stats', (req, res) => {
     cacheMisses: stats.cacheMisses,
     uniqueIPs: stats.uniqueIPs.size,
     errors: stats.errors.slice(-10),
+    errorCount: stats.errors.length,
+    uptime: ((Date.now() - startedAt.getTime()) / 1000).toFixed(0),
+    recentCodes,
   });
 });
 
@@ -127,6 +132,8 @@ app.get('/api/getm3u8/:code', async (req, res) => {
         url: masterUrl,
         expiresAt: now + 3 * 60 * 60 * 1000,
       });
+      recentCodes.unshift(code);
+      if (recentCodes.length > 20) recentCodes.pop();
       console.log('✅ Reconstruído e cacheado:', masterUrl);
       return res.json({ success: true, url: masterUrl });
     } else {
