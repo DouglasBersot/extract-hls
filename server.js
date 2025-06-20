@@ -3,22 +3,34 @@ import express from 'express';
 import cors from 'cors';
 import puppeteer from 'puppeteer';
 import got from 'got';
+import helmet from 'helmet';
+import rateLimit from 'express-rate-limit';
 
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-app.use(cors());
+// 🔐 Segurança extra (protege contra ataques HTTP comuns)
+app.use(helmet());
+
+// 🌍 CORS
+app.use(cors({ origin: '*', methods: ['GET'] }));
+
+// 🚫 Rate Limiting por IP (ajustável conforme demanda)
+const limiter = rateLimit({
+  windowMs: 1 * 60 * 1000, // 1 minuto
+  max: 300,               // Máx 300 req/min por IP
+});
+app.use(limiter);
 
 // 🧠 Cache em memória
 const masterCache = new Map(); // { code: { url, expiresAt } }
 const proxyCache = new Map();  // { url: { body, contentType, expiresAt } }
 
-// 🔎 API que extrai o master.m3u8 a partir de um código
+// 🔎 API para extrair master.m3u8
 app.get('/api/getm3u8/:code', async (req, res) => {
   const { code } = req.params;
   const now = Date.now();
 
-  // Verifica cache do master.m3u8
   const cached = masterCache.get(code);
   if (cached && cached.expiresAt > now) {
     console.log('✅ Master.m3u8 cache HIT para', code);
@@ -33,10 +45,9 @@ app.get('/api/getm3u8/:code', async (req, res) => {
       headless: 'new',
       args: ['--no-sandbox', '--disable-setuid-sandbox'],
     });
-
     const page = await browser.newPage();
-    let tsSegmentUrl = null;
 
+    let tsSegmentUrl = null;
     page.on('request', request => {
       const url = request.url();
       if (url.includes('.ts')) {
@@ -45,7 +56,6 @@ app.get('/api/getm3u8/:code', async (req, res) => {
       }
     });
 
-    console.log('🌐 Acessando:', targetUrl);
     await page.goto(targetUrl, { waitUntil: 'networkidle2', timeout: 30000 });
     await page.evaluate(() => {
       const video = document.querySelector('video');
@@ -72,7 +82,7 @@ app.get('/api/getm3u8/:code', async (req, res) => {
   }
 });
 
-// 🔁 Proxy inteligente com reescrita e cache
+// 🔁 Proxy com cache, reescrita e headers seguros
 app.get('/proxy', async (req, res) => {
   const targetUrl = req.query.m3u8;
   if (!targetUrl) return res.status(400).send('URL ausente.');
@@ -91,8 +101,9 @@ app.get('/proxy', async (req, res) => {
     const response = await got(targetUrl, {
       headers: {
         'User-Agent': 'Mozilla/5.0',
-        'Referer': 'https://c1z39.com/',
+        Referer: 'https://c1z39.com/',
       },
+      timeout: { request: 30000 },
       responseType: isPlaylist ? 'text' : 'buffer',
     });
 
@@ -139,7 +150,7 @@ app.get('/proxy', async (req, res) => {
 
 // 🔰 Rota raiz
 app.get('/', (req, res) => {
-  res.send('🟢 API + Proxy com cache e reescrita HLS online. Use /api/getm3u8/{code} ou /proxy?m3u8=...');
+  res.send('🟢 API + Proxy com cache, segurança e reescrita HLS online. Use /api/getm3u8/{code} ou /proxy?m3u8=...');
 });
 
 app.listen(PORT, () => {
