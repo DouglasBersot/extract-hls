@@ -230,8 +230,8 @@ app.get('/proxy', async (req, res) => {
         body: content,
         contentType: 'application/vnd.apple.mpegurl',
         expiresAt: now + 3 * 60 * 60 * 1000,
-        limitCacheSize(proxyCache, 200); // 🔒 Limita tamanho seguro
       });
+      limitCacheSize(proxyCache, 200); // 🔒 Limita tamanho seguro
 
       res.setHeader('Content-Type', 'application/vnd.apple.mpegurl');
       res.setHeader('Access-Control-Allow-Origin', '*');
@@ -241,8 +241,8 @@ app.get('/proxy', async (req, res) => {
         body: response.body,
         contentType: response.headers['content-type'] || 'application/octet-stream',
         expiresAt: now + 3 * 60 * 60 * 1000,
-        limitCacheSize(proxyCache, 200); // 🔒 Limita tamanho seguro
       });
+      limitCacheSize(proxyCache, 200); // 🔒 Limita tamanho seguro
 
       res.setHeader('Content-Type', response.headers['content-type'] || 'application/octet-stream');
       res.setHeader('Access-Control-Allow-Origin', '*');
