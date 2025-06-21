@@ -6,6 +6,7 @@ import got from 'got';
 import helmet from 'helmet';
 import rateLimit from 'express-rate-limit';
 import compression from 'compression';
+import basicAuth from 'express-basic-auth';
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -41,6 +42,12 @@ app.use((req, res, next) => {
   }
   next();
 });
+
+// 🔐 Proteção por usuário/senha para o dashboard
+app.use('/dashboard.html', basicAuth({
+  users: { 'douglasbersot': 'Euamodavi@23947520' },
+  challenge: true,
+}));
 
 // 📊 Estatísticas globais do servidor
 const stats = {
