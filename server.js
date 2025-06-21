@@ -84,6 +84,14 @@ app.get('/stats', (req, res) => {
 const masterCache = new Map();
 const proxyCache = new Map();
 
+// 🔁 Função para limitar tamanho de qualquer Map (FIFO)
+function limitCacheSize(map, maxSize) {
+  while (map.size > maxSize) {
+    const firstKey = map.keys().next().value;
+    map.delete(firstKey);
+  }
+}
+
 // ♻️ Reutilização do Puppeteer
 let browser;
 let browserInactivityTimer;
@@ -160,6 +168,7 @@ app.get('/api/getm3u8/:code', async (req, res) => {
         url: masterUrl,
         expiresAt: now + 3 * 60 * 60 * 1000,
       });
+      limitCacheSize(masterCache, 100); // 🔒 Limita tamanho seguro
       recentCodes.unshift(code);
       if (recentCodes.length > 20) recentCodes.pop();
       console.log('✅ Reconstruído e cacheado:', masterUrl);
@@ -221,6 +230,7 @@ app.get('/proxy', async (req, res) => {
         body: content,
         contentType: 'application/vnd.apple.mpegurl',
         expiresAt: now + 3 * 60 * 60 * 1000,
+        limitCacheSize(proxyCache, 200); // 🔒 Limita tamanho seguro
       });
 
       res.setHeader('Content-Type', 'application/vnd.apple.mpegurl');
@@ -231,6 +241,7 @@ app.get('/proxy', async (req, res) => {
         body: response.body,
         contentType: response.headers['content-type'] || 'application/octet-stream',
         expiresAt: now + 3 * 60 * 60 * 1000,
+        limitCacheSize(proxyCache, 200); // 🔒 Limita tamanho seguro
       });
 
       res.setHeader('Content-Type', response.headers['content-type'] || 'application/octet-stream');
