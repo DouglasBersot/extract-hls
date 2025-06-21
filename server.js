@@ -86,6 +86,19 @@ const proxyCache = new Map();
 
 // ♻️ Reutilização do Puppeteer
 let browser;
+let browserInactivityTimer;
+
+function resetBrowserInactivityTimer() {
+  if (browserInactivityTimer) clearTimeout(browserInactivityTimer);
+  browserInactivityTimer = setTimeout(async () => {
+    if (browser) {
+      console.log('⏲️ Puppeteer inativo. Fechando navegador...');
+      await browser.close();
+      browser = null;
+    }
+  }, 5 * 60 * 1000); // 5 minutos
+}
+
 async function getBrowser() {
   if (!browser) {
     browser = await puppeteer.launch({
@@ -95,6 +108,7 @@ async function getBrowser() {
     });
     console.log('🧠 Puppeteer iniciado e reutilizável.');
   }
+  resetBrowserInactivityTimer(); // ⏲️ reinicia o cronômetro do fechamento do navegador Puppeteer sempre que for usado
   return browser;
 }
 
