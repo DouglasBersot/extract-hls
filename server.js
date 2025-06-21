@@ -148,7 +148,10 @@ app.get('/api/getm3u8/:code', async (req, res) => {
       if (video) video.click();
     });
 
-    await new Promise(r => setTimeout(r, 5000));
+  await page.waitForResponse(
+  response => response.url().includes('.ts'),
+  { timeout: 5000 }  // Intercepta o arquivo .ts mais rapido sem muita espera, se nao espera 5segs
+);
     await page.close(); // fecha apenas a aba, não o navegador
 
     if (tsSegmentUrl) {
