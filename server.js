@@ -135,6 +135,11 @@ async function getBrowser() {
   return browser;
 }
 
+// 🔍 Status do Puppeteer
+app.get('/status', (req, res) => {
+  res.json({ browserRunning: !!browser });
+});
+
 // 🔍 Extrai master.m3u8
 app.get('/api/getm3u8/:code', async (req, res) => {
   const { code } = req.params;
