@@ -77,6 +77,11 @@ app.get('/stats', (req, res) => {
     errorCount: stats.errors.length,
     uptime: ((Date.now() - startedAt.getTime()) / 1000).toFixed(0),
     recentCodes,
+    // 📦 Tamanhos dos caches incluídos aqui:
+    cacheSizes: {
+      masterCache: masterCache.size,
+      proxyCache: proxyCache.size
+    }
   });
 });
 
