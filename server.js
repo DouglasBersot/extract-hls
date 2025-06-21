@@ -84,6 +84,20 @@ app.get('/stats', (req, res) => {
 const masterCache = new Map();
 const proxyCache = new Map();
 
+// ♻️ Reutilização do Puppeteer
+let browser;
+async function getBrowser() {
+  if (!browser) {
+    browser = await puppeteer.launch({
+      headless: 'new',
+      args: ['--no-sandbox', '--disable-setuid-sandbox'],
+      executablePath: process.env.PUPPETEER_EXECUTABLE_PATH || puppeteer.executablePath(),
+    });
+    console.log('🧠 Puppeteer iniciado e reutilizável.');
+  }
+  return browser;
+}
+
 // 🔍 Extrai master.m3u8
 app.get('/api/getm3u8/:code', async (req, res) => {
   const { code } = req.params;
@@ -101,10 +115,7 @@ app.get('/api/getm3u8/:code', async (req, res) => {
 
   try {
     console.log('🔧 Puppeteer iniciando...');
-    const browser = await puppeteer.launch({
-      headless: 'new',
-      args: ['--no-sandbox', '--disable-setuid-sandbox'],
-    });
+    const browser = await getBrowser();
 
     const page = await browser.newPage();
     let tsSegmentUrl = null;
@@ -124,7 +135,7 @@ app.get('/api/getm3u8/:code', async (req, res) => {
     });
 
     await new Promise(r => setTimeout(r, 5000));
-    await browser.close();
+    await page.close(); // fecha apenas a aba, não o navegador
 
     if (tsSegmentUrl) {
       const masterUrl = tsSegmentUrl.replace(/\/[^/]+\.ts/, '/master.m3u8');
