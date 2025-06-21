@@ -85,6 +85,16 @@ app.get('/stats', (req, res) => {
   });
 });
 
+// 🧹 Rota para limpeza manual dos caches via dashboard
+app.get('/clear-cache', (req, res) => {
+  masterCache.clear();
+  proxyCache.clear();
+  res.json({
+    success: true,
+    message: '✅ Caches masterCache e proxyCache foram limpos com sucesso.'
+  });
+});
+
 // 🧠 Cache
 const masterCache = new Map();
 const proxyCache = new Map();
