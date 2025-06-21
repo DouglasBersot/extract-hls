@@ -44,7 +44,7 @@ app.use((req, res, next) => {
 });
 
 // 🔐 Proteção por usuário/senha para o dashboard
-app.use('/dashboard.html', basicAuth({
+app.use('/stats', basicAuth({
   users: { 'douglasbersot': 'Euamodavi@23947520' },
   challenge: true,
 }));
