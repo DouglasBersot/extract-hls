@@ -154,7 +154,14 @@ app.get('/api/getm3u8/:code', async (req, res) => {
   }
 
   stats.cacheMisses++;
-  const targetUrl = `https://c1z39.com/bkg/${code}`;
+  const urlOptions = [
+  `https://c1z39.com/bkg/${code}`,
+  `https://tpz6t.com/bkg/${code}`,
+  `https://26efp.com/bkg/${code}`
+];
+
+const targetUrl = urlOptions[Math.floor(Math.random() * urlOptions.length)];
+
 
   try {
     console.log('🔧 Puppeteer iniciando...');
@@ -178,7 +185,7 @@ app.get('/api/getm3u8/:code', async (req, res) => {
 
     await page.waitForResponse(
       response => response.url().includes('.ts'),
-      { timeout: 50000 }
+      { timeout: 10000 }
     );
 
     await page.close();
