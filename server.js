@@ -154,14 +154,7 @@ app.get('/api/getm3u8/:code', async (req, res) => {
   }
 
   stats.cacheMisses++;
-  const urlOptions = [
-  `https://c1z39.com/bkg/${code}`,
-  `https://tpz6t.com/bkg/${code}`,
-  `https://26efp.com/bkg/${code}`
-];
-
-const targetUrl = urlOptions[Math.floor(Math.random() * urlOptions.length)];
-
+  const targetUrl = https://filemoon.to/e/${code};
 
   try {
     console.log('🔧 Puppeteer iniciando...');
@@ -185,7 +178,7 @@ const targetUrl = urlOptions[Math.floor(Math.random() * urlOptions.length)];
 
     await page.waitForResponse(
       response => response.url().includes('.ts'),
-      { timeout: 10000 }
+      { timeout: 30000 }
     );
 
     await page.close();
@@ -233,7 +226,7 @@ app.get('/proxy', async (req, res) => {
     const response = await got(targetUrl, {
       headers: {
         'User-Agent': 'Mozilla/5.0',
-        Referer: 'https://c1z39.com/'
+        Referer: 'https://26efp.com/'
       },
       timeout: { request: 30000 },
       responseType: isPlaylist ? 'text' : 'buffer'
