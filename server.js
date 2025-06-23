@@ -178,7 +178,7 @@ app.get('/api/getm3u8/:code', async (req, res) => {
 
     await page.waitForResponse(
       response => response.url().includes('.ts'),
-      { timeout: 15000 }
+      { timeout: 50000 }
     );
 
     await page.close();
