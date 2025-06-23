@@ -132,7 +132,7 @@ app.get('/clear-cache', (req, res) => {
   proxyCache.clear();
   res.json({
     success: true,
-    message: '✅ Caches masterCache e proxyCache foram limpos com sucesso.'
+    message: 'Caches Master e Proxy foram limpos com sucesso. ✅'
   });
 });
 
@@ -239,12 +239,12 @@ app.get('/proxy', async (req, res) => {
 
       content = content.replace(/URI="([^"]+)"/g, (match, url) => {
         const absolute = url.startsWith('http') ? url : new URL(url, base).href;
-        return `URI="https://${req.get('host')}/proxy?m3u8=${encodeURIComponent(absolute)}"`;
+        return URI="https://${req.get('host')}/proxy?m3u8=${encodeURIComponent(absolute)}";
       });
 
       content = content.replace(/^(?!#)(.*\.(ts|m3u8)(\?.*)?)$/gm, match => {
         const absolute = match.startsWith('http') ? match : new URL(match, base).href;
-        return `https://${req.get('host')}/proxy?m3u8=${encodeURIComponent(absolute)}`;
+        return https://${req.get('host')}/proxy?m3u8=${encodeURIComponent(absolute)};
       });
 
       proxyCache.set(targetUrl, {
@@ -272,7 +272,7 @@ app.get('/proxy', async (req, res) => {
   } catch (err) {
     console.error('Erro no proxy:', err.message);
     stats.errors.push(err.message);
-    return res.status(502).send(`Erro ao acessar conteúdo. ${err.message}`);
+    return res.status(502).send(Erro ao acessar conteúdo. ${err.message});
   }
 });
 
@@ -283,5 +283,5 @@ app.get('/', (req, res) => {
 
 // 🚀 Inicializa o servidor
 app.listen(PORT, () => {
-  console.log(`🚀 Servidor rodando na porta ${PORT}`);
+  console.log(🚀 Servidor rodando na porta ${PORT});
 });
