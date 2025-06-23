@@ -154,7 +154,7 @@ app.get('/api/getm3u8/:code', async (req, res) => {
   }
 
   stats.cacheMisses++;
-  const targetUrl = `https://filemoon.to/e/${code}`;
+  const targetUrl = `https://26efp.com/bkg/${code}`;
 
   try {
     console.log('🔧 Puppeteer iniciando...');
@@ -172,9 +172,21 @@ app.get('/api/getm3u8/:code', async (req, res) => {
 
     await page.goto(targetUrl, { waitUntil: 'networkidle2', timeout: 30000 });
     await page.evaluate(() => {
-      const video = document.querySelector('video');
-      if (video) video.click();
-    });
+  // Clica no botão do player JWPlayer
+  const jwPlayBtn = document.querySelector('.jw-icon-display');
+  if (jwPlayBtn) {
+    jwPlayBtn.click();
+    console.log('▶️ Botão JWPlayer clicado!');
+  }
+
+  // Força reprodução do <video> HTML5, se existir
+  const video = document.querySelector('video');
+  if (video) {
+    video.muted = true;
+    video.play().catch(() => {});
+    console.log('▶️ Vídeo HTML5 forçado a iniciar');
+  }
+});
 
     await page.waitForResponse(
       response => response.url().includes('.ts'),
