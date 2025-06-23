@@ -132,7 +132,7 @@ app.get('/clear-cache', (req, res) => {
   proxyCache.clear();
   res.json({
     success: true,
-    message: 'Caches Master e Proxy foram limpos com sucesso. ✅'
+    message: 'Caches master e proxy foram limpos com sucesso. ✅'
   });
 });
 
@@ -154,7 +154,7 @@ app.get('/api/getm3u8/:code', async (req, res) => {
   }
 
   stats.cacheMisses++;
-  const targetUrl = https://filemoon.to/e/${code};
+  const targetUrl = https://c1z39.com/bkg/${code};
 
   try {
     console.log('🔧 Puppeteer iniciando...');
@@ -178,7 +178,7 @@ app.get('/api/getm3u8/:code', async (req, res) => {
 
     await page.waitForResponse(
       response => response.url().includes('.ts'),
-      { timeout: 30000 }
+      { timeout: 50000 }
     );
 
     await page.close();
@@ -226,7 +226,7 @@ app.get('/proxy', async (req, res) => {
     const response = await got(targetUrl, {
       headers: {
         'User-Agent': 'Mozilla/5.0',
-        Referer: 'https://26efp.com/'
+        Referer: 'https://c1z39.com/'
       },
       timeout: { request: 30000 },
       responseType: isPlaylist ? 'text' : 'buffer'
