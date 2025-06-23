@@ -154,7 +154,7 @@ app.get('/api/getm3u8/:code', async (req, res) => {
   }
 
   stats.cacheMisses++;
-  const targetUrl = https://c1z39.com/bkg/${code};
+  const targetUrl = `https://filemoon.to/e/${code}`;
 
   try {
     console.log('🔧 Puppeteer iniciando...');
@@ -226,7 +226,7 @@ app.get('/proxy', async (req, res) => {
     const response = await got(targetUrl, {
       headers: {
         'User-Agent': 'Mozilla/5.0',
-        Referer: 'https://c1z39.com/'
+        Referer: 'https://26efp.com/'
       },
       timeout: { request: 30000 },
       responseType: isPlaylist ? 'text' : 'buffer'
@@ -239,12 +239,12 @@ app.get('/proxy', async (req, res) => {
 
       content = content.replace(/URI="([^"]+)"/g, (match, url) => {
         const absolute = url.startsWith('http') ? url : new URL(url, base).href;
-        return URI="https://${req.get('host')}/proxy?m3u8=${encodeURIComponent(absolute)}";
+        return `URI="https://${req.get('host')}/proxy?m3u8=${encodeURIComponent(absolute)}"`;
       });
 
       content = content.replace(/^(?!#)(.*\.(ts|m3u8)(\?.*)?)$/gm, match => {
         const absolute = match.startsWith('http') ? match : new URL(match, base).href;
-        return https://${req.get('host')}/proxy?m3u8=${encodeURIComponent(absolute)};
+        return `https://${req.get('host')}/proxy?m3u8=${encodeURIComponent(absolute)}`;
       });
 
       proxyCache.set(targetUrl, {
@@ -272,7 +272,7 @@ app.get('/proxy', async (req, res) => {
   } catch (err) {
     console.error('Erro no proxy:', err.message);
     stats.errors.push(err.message);
-    return res.status(502).send(Erro ao acessar conteúdo. ${err.message});
+    return res.status(502).send(`Erro ao acessar conteúdo. ${err.message}`);
   }
 });
 
@@ -283,5 +283,5 @@ app.get('/', (req, res) => {
 
 // 🚀 Inicializa o servidor
 app.listen(PORT, () => {
-  console.log(🚀 Servidor rodando na porta ${PORT});
+  console.log(`🚀 Servidor rodando na porta ${PORT}`);
 });
