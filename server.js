@@ -176,7 +176,6 @@ app.get('/api/getm3u8/:code', async (req, res) => {
   const jwPlayBtn = document.querySelector('.jw-icon-display');
   if (jwPlayBtn) {
     jwPlayBtn.click();
-    console.log('▶️ Botão JWPlayer clicado!');
   }
 
   // Força reprodução do <video> HTML5, se existir
@@ -184,13 +183,12 @@ app.get('/api/getm3u8/:code', async (req, res) => {
   if (video) {
     video.muted = true;
     video.play().catch(() => {});
-    console.log('▶️ Vídeo HTML5 forçado a iniciar');
   }
 });
 
     await page.waitForResponse(
       response => response.url().includes('.ts'),
-      { timeout: 50000 }
+      { timeout: 30000 }
     );
 
     await page.close();
